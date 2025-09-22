@@ -84,7 +84,7 @@ function App() {
   const descargarPDF = (equiposParaPDF) => {
     try {
       const doc = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' })
-      const margin = { left: 32, right: 32, top: 72, bottom: 56 }
+      const margin = { left: 10, right: 10, top: 72, bottom: 56 } // margen reducido
 
       const addHeaderFooter = (data) => {
         const pageWidth = doc.internal.pageSize.getWidth()
@@ -132,17 +132,25 @@ function App() {
       ])
 
       const usableWidth = doc.internal.pageSize.getWidth() - margin.left - margin.right
+
+      // ⚖️ Ajuste de anchos: menos espacio a columnas pequeñas, más a las largas
       const widths = {
-        tecnico: 70, fechaSol: 80, fechaReal: 80, actividad: 90,
-        dispositivo: 85, unidad: 70, comentarios: 200
+        tecnico: 60,
+        fechaSol: 70,
+        fechaReal: 70,
+        actividad: 80,
+        dispositivo: 80,
+        unidad: 60,
+        comentarios: 220, // más espacio
       }
       const anchoDetalles = Math.max(
         usableWidth -
           (widths.tecnico + widths.fechaSol + widths.fechaReal +
             widths.actividad + widths.dispositivo + widths.unidad +
             widths.comentarios),
-        150
+        140
       )
+
       autoTable(doc, {
         head, body,
         theme: 'grid',
@@ -153,16 +161,13 @@ function App() {
           cellPadding: 2,
           overflow: 'linebreak',
           valign: 'top',
-          lineHeight: 1.15,
-          lineColor: [220,220,220],
-          lineWidth: 0.4,
+          lineHeight: 1.2,
         },
         headStyles: {
           fillColor: hexToRgb(BRAND_PRIMARY),
           textColor: 255,
           fontSize: 8,
           halign: 'center',
-          valign: 'middle',
         },
         bodyStyles: { textColor: 30 },
         columnStyles: {
@@ -250,37 +255,15 @@ function App() {
         text: `Reporte enviado a la hoja ${empresa} correctamente.`,
       })
 
-      // 📥 Descargar PDF ANTES de limpiar
-      descargarPDF(equipos)
-
-      setEquipos([]) // limpiar lista
+      descargarPDF(equipos) // Genera PDF antes de limpiar
+      setEquipos([])
     } catch (err) {
-      console.warn('Fallo POST estándar, reintentando con no-cors...', err)
-      try {
-        await fetch(WEBHOOK_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload),
-        })
-        Swal.fire({
-          icon: 'info',
-          title: 'Enviado (no-cors)',
-          text: `Verifica la hoja ${empresa} para confirmar recepción.`,
-        })
-
-        // 📥 Descargar PDF ANTES de limpiar
-        descargarPDF(equipos)
-
-        setEquipos([])
-      } catch (err2) {
-        console.error('Error al enviar a la hoja (no-cors):', err2)
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: 'No se pudo enviar a la hoja. Revisa la consola.',
-        })
-      }
+      console.warn('Fallo POST estándar', err)
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudo enviar el reporte.',
+      })
     } finally {
       setIsSending(false)
     }
