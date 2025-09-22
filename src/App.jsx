@@ -50,21 +50,23 @@ function App() {
 
   const agregarEquipo = (e) => {
     e.preventDefault()
-    const todosVacios =
-      !fechaRealizacion &&
-      !actividad &&
-      !dispositivo &&
-      !unidad &&
-      !detalles &&
+    // ✅ Validar que TODOS los campos estén llenos
+    if (
+      !fechaRealizacion ||
+      !actividad ||
+      !dispositivo ||
+      !unidad ||
+      !detalles ||
       !comentarios
-    if (todosVacios) {
+    ) {
       Swal.fire({
         icon: 'warning',
-        title: 'Sin datos',
-        text: 'Ingresa al menos un dato antes de agregar al listado.',
+        title: 'Campos incompletos',
+        text: 'Debes llenar todos los campos antes de agregar al listado.',
       })
       return
     }
+
     const nuevo = {
       fechaRealizacion,
       actividad,
@@ -73,7 +75,15 @@ function App() {
       detalles,
       comentarios,
     }
+
     setEquipos((prev) => [...prev, nuevo])
+    Swal.fire({
+      icon: 'success',
+      title: 'Agregado',
+      text: `La unidad "${unidad}" fue agregada al listado.`,
+      timer: 2000,
+      showConfirmButton: false,
+    })
     limpiarCamposEquipo()
   }
 
@@ -84,7 +94,7 @@ function App() {
   const descargarPDF = (equiposParaPDF) => {
     try {
       const doc = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' })
-      const margin = { left: 10, right: 10, top: 72, bottom: 56 } // margen reducido
+      const margin = { left: 10, right: 10, top: 72, bottom: 56 }
 
       const addHeaderFooter = (data) => {
         const pageWidth = doc.internal.pageSize.getWidth()
@@ -133,7 +143,6 @@ function App() {
 
       const usableWidth = doc.internal.pageSize.getWidth() - margin.left - margin.right
 
-      // ⚖️ Ajuste de anchos: menos espacio a columnas pequeñas, más a las largas
       const widths = {
         tecnico: 60,
         fechaSol: 70,
@@ -141,7 +150,7 @@ function App() {
         actividad: 80,
         dispositivo: 80,
         unidad: 60,
-        comentarios: 220, // más espacio
+        comentarios: 220,
       }
       const anchoDetalles = Math.max(
         usableWidth -
@@ -210,23 +219,6 @@ function App() {
       return
     }
 
-    const camposRequeridos = [
-      'fechaRealizacion','actividad','dispositivo',
-      'unidad','detalles','comentarios'
-    ]
-    for (let i = 0; i < equipos.length; i++) {
-      const eq = equipos[i]
-      const faltantes = camposRequeridos.filter((c) => !eq[c])
-      if (faltantes.length > 0) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Faltan campos por llenar',
-          html: `Revisa la fila #${i + 1}. Faltan: <b>${faltantes.join(', ')}</b>`,
-        })
-        return
-      }
-    }
-
     const WEBHOOK_URL =
       empresa === 'DIDCOM'
         ? import.meta.env.VITE_SHEETS_WEBHOOK_DIDCOM
@@ -255,7 +247,7 @@ function App() {
         text: `Reporte enviado a la hoja ${empresa} correctamente.`,
       })
 
-      descargarPDF(equipos) // Genera PDF antes de limpiar
+      descargarPDF(equipos)
       setEquipos([])
     } catch (err) {
       console.warn('Fallo POST estándar', err)
